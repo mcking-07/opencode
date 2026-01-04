@@ -452,6 +452,14 @@ export namespace Config {
         .describe("Maximum number of agentic iterations before forcing text-only response"),
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
+      model_tiers: z
+        .object({
+          quick: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-haiku-4-5") }).optional(),
+          standard: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-sonnet-4-5") }).optional(),
+          advanced: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-opus-4-5") }).optional(),
+        })
+        .optional()
+        .describe("Model tier mappings for this agent"),
     })
     .catchall(z.any())
     .transform((agent, ctx) => {
@@ -469,6 +477,7 @@ export namespace Config {
         "permission",
         "disable",
         "tools",
+        "model_tiers",
       ])
 
       // Extract unknown properties into options

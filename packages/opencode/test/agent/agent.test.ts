@@ -446,3 +446,128 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
     },
   })
 })
+
+test("resolveModel uses agent model as highest priority", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        custom: {
+          model: "openai/gpt-5",
+          model_tiers: {
+            quick: { model: "anthropic/claude-haiku-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.get("custom")
+      const model = await Agent.resolveModel(agent!, "quick", undefined)
+
+      expect(model.providerID).toBe("openai")
+      expect(model.modelID).toBe("gpt-5")
+    },
+  })
+})
+
+test("resolveModel falls back to parent session model when no tier", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.get("build")
+      const parentModel = { modelID: "gpt-5", providerID: "openai" }
+      const model = await Agent.resolveModel(agent!, undefined, parentModel)
+
+      expect(model).toEqual(parentModel)
+    },
+  })
+})
+
+test("resolveModel uses agent tier when configured", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        custom: {
+          model_tiers: {
+            quick: { model: "anthropic/claude-haiku-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.get("custom")
+      const parentModel = { modelID: "gpt-5", providerID: "openai" }
+      const model = await Agent.resolveModel(agent!, "quick", parentModel)
+
+      expect(model.providerID).toBe("anthropic")
+      expect(model.modelID).toBe("claude-haiku-4-5")
+    },
+  })
+})
+
+test("resolveModel falls back to parent session when agent tier not defined", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        custom: {
+          model_tiers: {
+            standard: { model: "anthropic/claude-sonnet-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.get("custom")
+      const parentModel = { modelID: "gpt-5", providerID: "openai" }
+      const model = await Agent.resolveModel(agent!, "quick", parentModel)
+
+      expect(model).toEqual(parentModel)
+    },
+  })
+})
+
+test("resolveModel uses agent-specific tier mappings", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        explore: {
+          model_tiers: {
+            quick: { model: "anthropic/claude-haiku-4-5" },
+          },
+        },
+        code_review: {
+          model_tiers: {
+            quick: { model: "anthropic/claude-sonnet-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const exploreAgent = await Agent.get("explore")
+      const codeReviewAgent = await Agent.get("code_review")
+      const parentModel = { modelID: "gpt-5", providerID: "openai" }
+
+      const exploreModel = await Agent.resolveModel(exploreAgent!, "quick", parentModel)
+      expect(exploreModel.modelID).toBe("claude-haiku-4-5")
+
+      const codeReviewModel = await Agent.resolveModel(codeReviewAgent!, "quick", parentModel)
+      expect(codeReviewModel.modelID).toBe("claude-sonnet-4-5")
+    },
+  })
+})

@@ -1071,6 +1071,10 @@ export namespace Provider {
     }
   }
 
+  export type ModelReference = { modelID: string; providerID: string; };
+
+  export type ModelTier = "quick" | "standard" | "advanced"
+
   export function parseModel(model: string) {
     const [providerID, ...rest] = model.split("/")
     return {
