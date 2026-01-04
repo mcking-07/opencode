@@ -206,6 +206,18 @@ export namespace Agent {
     return state().then((x) => Object.keys(x)[0])
   }
 
+  export async function resolveModel(agent: Info, tier?: Provider.ModelTier, parentSessionModel?: Provider.ModelReference): Promise<Provider.ModelReference> {
+    const config = await Config.get()
+
+    if (agent?.model) return agent.model;
+
+    if (tier && config?.model_tiers?.[tier]) {
+      return Provider.parseModel(config.model_tiers[tier].model);
+    }
+
+    return parentSessionModel ?? await Provider.defaultModel();
+  }
+
   export async function generate(input: { description: string; model?: { providerID: string; modelID: string } }) {
     const cfg = await Config.get()
     const defaultModel = input.model ?? (await Provider.defaultModel())

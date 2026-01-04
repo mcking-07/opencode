@@ -779,6 +779,14 @@ export namespace Config {
         .string()
         .describe("Small model to use for tasks like title generation in the format of provider/model")
         .optional(),
+      model_tiers: z
+        .object({
+          quick: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-haiku-4-5") }).optional(),
+          standard: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-sonnet-4-5") }).optional(),
+          advanced: z.object({ model: z.string().describe("Model ID in format provider/model, eg anthropic/claude-opus-4-5") }).optional(),
+        })
+        .optional()
+        .describe("Global model tier mappings for all agents"),
       default_agent: z
         .string()
         .optional()

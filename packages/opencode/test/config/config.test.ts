@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test"
 import { Config } from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
+import { Agent } from "../../src/agent/agent"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
@@ -865,6 +866,53 @@ test("merges legacy tools with existing permission config", async () => {
         glob: "allow",
         bash: "allow",
       })
+    },
+  })
+})
+
+test("global model_tiers config is parsed correctly", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      model_tiers: {
+        quick: { model: "anthropic/claude-haiku-4-5" },
+        standard: { model: "anthropic/claude-sonnet-4-5" },
+        advanced: { model: "anthropic/claude-opus-4-5" },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model_tiers).toBeDefined()
+
+      expect(config.model_tiers?.quick?.model).toBe("anthropic/claude-haiku-4-5")
+      expect(config.model_tiers?.standard?.model).toBe("anthropic/claude-sonnet-4-5")
+      expect(config.model_tiers?.advanced?.model).toBe("anthropic/claude-opus-4-5")
+    },
+  })
+})
+
+test("agent-level model_tiers are not supported in Solution A", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        custom: {
+          model_tiers: {
+            quick: { model: "anthropic/claude-haiku-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await Agent.get("custom")
+
+      expect(agent?.options?.model_tiers).toBeDefined()
     },
   })
 })
