@@ -868,3 +868,53 @@ test("merges legacy tools with existing permission config", async () => {
     },
   })
 })
+
+test("global model_tiers config is parsed correctly", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      model_tiers: {
+        quick: { model: "anthropic/claude-haiku-4-5" },
+        standard: { model: "anthropic/claude-sonnet-4-5" },
+        advanced: { model: "anthropic/claude-opus-4-5" },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+
+      expect(config.model_tiers).toBeDefined()
+      expect(config.model_tiers?.quick?.model).toBe("anthropic/claude-haiku-4-5")
+      expect(config.model_tiers?.standard?.model).toBe("anthropic/claude-sonnet-4-5")
+      expect(config.model_tiers?.advanced?.model).toBe("anthropic/claude-opus-4-5")
+    },
+  })
+})
+
+test("agent-level model_tiers config is parsed correctly", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      model_tiers: {
+        quick: { model: "anthropic/claude-haiku-4-5" },
+      },
+      agent: {
+        code_review: {
+          model_tiers: {
+            quick: { model: "anthropic/claude-sonnet-4-5" },
+          },
+        },
+      },
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+
+      expect(config.agent?.code_review?.model_tiers?.quick?.model).toBe("anthropic/claude-sonnet-4-5")
+    },
+  })
+})

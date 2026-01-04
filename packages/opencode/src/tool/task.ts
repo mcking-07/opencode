@@ -27,6 +27,7 @@ export const TaskTool = Tool.define("task", async () => {
       subagent_type: z.string().describe("The type of specialized agent to use for this task"),
       session_id: z.string().describe("Existing Task session to continue").optional(),
       command: z.string().describe("The command that triggered this task").optional(),
+      model_tier: z.enum(["quick", "standard", "advanced"]).describe("Model tier for this subagent: 'quick' for fast/inexpensive, 'standard' for balanced, 'advanced' for powerful").optional(),
     }),
     async execute(params, ctx) {
       const config = await Config.get()
@@ -109,10 +110,7 @@ export const TaskTool = Tool.define("task", async () => {
         })
       })
 
-      const model = agent.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      const model = await Agent.resolveModel(agent, params.model_tier, { modelID: msg.info.modelID, providerID: msg.info.providerID })
 
       function cancel() {
         SessionPrompt.cancel(session.id)
